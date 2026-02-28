@@ -1,14 +1,3 @@
-
-Hmm. We’re having trouble finding that site.
-
-We can’t connect to the server at sykawai.42.fr.
-
-If you entered the right address, you can:
-
-    Try again later
-    Check your network connection
-    Check that Firefox has permission to access the web (you might be connected but behind a firewall)*This project has been created as part of the 42 curriculum by sykawai*
-
 # Inception
 
 ## Description
