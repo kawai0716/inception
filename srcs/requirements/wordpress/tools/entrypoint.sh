@@ -16,6 +16,20 @@ read_secret() {
   printf "%s" "$value"
 }
 
+sync_wp_public_url() {
+  local url="$1"
+
+  # Keep constants in wp-config.php aligned with current public URL.
+  wp config set --allow-root WP_HOME "$url" --type=constant --path=/var/www/wordpress
+  wp config set --allow-root WP_SITEURL "$url" --type=constant --path=/var/www/wordpress
+
+  # Keep database options aligned too (used when constants are absent or inspected).
+  if wp core is-installed --allow-root --path=/var/www/wordpress >/dev/null 2>&1; then
+    wp option update --allow-root --path=/var/www/wordpress home "$url"
+    wp option update --allow-root --path=/var/www/wordpress siteurl "$url"
+  fi
+}
+
 # Required env (non-secret) from .env
 : "${DOMAIN_NAME:?Missing DOMAIN_NAME}"
 : "${MYSQL_DATABASE:?Missing MYSQL_DATABASE}"
@@ -25,6 +39,16 @@ read_secret() {
 : "${WP_ADMIN_EMAIL:?Missing WP_ADMIN_EMAIL}"
 : "${WP_USER:?Missing WP_USER}"
 : "${WP_USER_EMAIL:?Missing WP_USER_EMAIL}"
+WP_PUBLIC_URL="${WP_PUBLIC_URL:-https://${DOMAIN_NAME}}"
+WP_PUBLIC_URL="${WP_PUBLIC_URL%/}"
+
+case "$WP_PUBLIC_URL" in
+  http://*|https://*) ;;
+  *)
+    echo "Error: WP_PUBLIC_URL must start with http:// or https:// (current: ${WP_PUBLIC_URL})" >&2
+    exit 1
+    ;;
+esac
 
 # Secrets
 MYSQL_PASSWORD="$(read_secret /run/secrets/db_password)"
@@ -72,17 +96,13 @@ if [ ! -f "wp-config.php" ]; then
     --dbpass="${MYSQL_PASSWORD}" \
     --dbhost="mariadb:3306" \
     --path=/var/www/wordpress
-
-  # Optional but common: allow reverse proxy HTTPS in WP
-  wp config set --allow-root WP_HOME "https://${DOMAIN_NAME}" --type=constant --path=/var/www/wordpress
-  wp config set --allow-root WP_SITEURL "https://${DOMAIN_NAME}" --type=constant --path=/var/www/wordpress
 fi
 
 # Install WP only if not installed yet
 if ! wp core is-installed --allow-root --path=/var/www/wordpress >/dev/null 2>&1; then
   echo "[wordpress] Running wp core install..."
   wp core install --allow-root \
-    --url="https://${DOMAIN_NAME}" \
+    --url="${WP_PUBLIC_URL}" \
     --title="${WP_TITLE}" \
     --admin_user="${WP_ADMIN_USER}" \
     --admin_password="${WP_ADMIN_PASSWORD}" \
@@ -94,6 +114,9 @@ if ! wp core is-installed --allow-root --path=/var/www/wordpress >/dev/null 2>&1
     --user_pass="${WP_USER_PASSWORD}" \
     --role=subscriber
 fi
+
+echo "[wordpress] Syncing public URL to ${WP_PUBLIC_URL}..."
+sync_wp_public_url "${WP_PUBLIC_URL}"
 
 # Ensure permissions after setup (avoid upload issues)
 chown -R www-data:www-data /var/www/wordpress
