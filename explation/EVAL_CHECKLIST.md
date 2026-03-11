@@ -382,3 +382,16 @@ docker compose -f srcs/docker-compose.yml ps
 ### 補足ルール
 - コード提示で済む項目と、実演必須項目を分けて進行する。
 - Persistence と Configuration modification は最終的に実演が必要。
+
+
+DBログイン方法
+docker compose -f srcs/docker-compose.yml exec mariadb sh -lc 'mariadb -u root -p"$(cat /run/secrets/db_root_password)"'
+
+ SHOW DATABASES;
+  USE wordpress;
+  SHOW TABLES;
+  EXIT;
+
+  -> になった時は文が未完了です。; を打つか \c でキャンセルできます
+
+  
