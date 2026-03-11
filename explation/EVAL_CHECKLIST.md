@@ -385,8 +385,9 @@ docker compose -f srcs/docker-compose.yml ps
 
 
 DBログイン方法
+```bash
 docker compose -f srcs/docker-compose.yml exec mariadb sh -lc 'mariadb -u root -p"$(cat /run/secrets/db_root_password)"'
-
+```
  SHOW DATABASES;
   USE wordpress;
   SHOW TABLES;
